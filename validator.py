@@ -2,8 +2,7 @@ from pydantic import BaseModel
 
 class ChatQuery(BaseModel):
     query: str
-    history_input: list
-    history_output: list
+    history_memory: str
     temperature: float
     max_tokens: int
     memory: str

@@ -16,7 +16,7 @@ def request_llm(body: ChatQuery):
 @st.dialog("History in the memory")
 def show_history_memory():
     if "history_memory" in st.session_state:
-        st.markdown(st.session_state.history_memory)
+        st.write(st.session_state.history_memory.replace("\n", "\n\n"))
 
 def set_session_state():
     # Prepare the LLM model
@@ -53,8 +53,7 @@ def main():
             save_setting = st.form_submit_button("Save setting")
 
     # Application main interface
-    st.title("AI Chatbot")
-    st.markdown("The application provides a chatbot with conversation memory. In the backend, it has an AI Agent to call tools/functions. The tools are fine-tuned LLM, Hugging Face Pipeline, custom function, and wrapped AI.")
+    st.title("Financial AI Chatbot")
 
     # Display chats
     for message in st.session_state.history:
@@ -69,20 +68,11 @@ def main():
         with st.chat_message("user"):
             st.markdown(query)
 
-        # Prepare the input and output history
-        history_input = [
-            message["content"] for message in st.session_state.history[:-1] if message["role"]=="user"
-        ] # The last content in the query is not history
-        
-        history_output = [
-            message["content"] for message in st.session_state.history if message["role"]=="assistant"
-        ]
-        
+       
         # Request the LLM
         body = {
             "query": query,
-            "history_input": history_input,
-            "history_output": history_output,
+            "history_memory": st.session_state.history_memory,
             "temperature": round(temperature, 3),
             "max_tokens": max_tokens,
             "memory": memory,
@@ -91,10 +81,10 @@ def main():
 
         response = request_llm(body)
         with st.chat_message("assistant"):
-            st.write(response["response"])
+            st.write(response["output"])
 
         # Append assistant answer to history
-        st.session_state.history.append({"role": "assistant", "content": response["response"]})
+        st.session_state.history.append({"role": "assistant", "content": response["output"]})
 
         # Extract the latest history memory
         st.session_state.history_memory = response["history"]

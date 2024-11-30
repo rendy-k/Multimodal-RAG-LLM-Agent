@@ -46,23 +46,43 @@ def choose_memory(input_memory: str, memory_arg: int):
     return memory
 
 
+# Create tools
 @tool
-def saving(earn: int, spend: int) -> int:
-    """Calculate the saving from earning and spending"""
-    return earn - spend
-
-
-@tool
-def investing(capital: int, tenure: float, interest: float) -> int:
-    """Calculate the final value of investment given the capital, interest rate per annum, and tenure"""
-    invest = capital * (1 + interest)**tenure
+def investing(capital: int, tenure: float, dividend_yield: float) -> int:
+    """Calculate the final value of investment given the capital, interest rate per annum, and tenure.
+    If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal."""
+    invest = capital * (1 + dividend_yield)**tenure
     return invest
 
+@tool
+def calculate_dy(current_price: int, dividend: int) -> float:
+    """Calculate dividend yield based on the dividend and and current price."""
+    dividend_yield = round(dividend/current_price, 3)
+    return dividend_yield
 
-def create_agent(memory):
+@tool
+def entry_criteria(dividend_yield: float, current_price: int, yearly_payout: bool) -> str:
+    """Decide whether to buy the stock (entry) based on the dividend yield, current price, and yearly payout.
+    If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal."""
+    if yearly_payout == True:
+        if dividend_yield >= 0.04 or current_price <= 1000:
+            decision = "buy the stock"
+        else:
+            decision = "do not buy the stock"
+    else:
+        if dividend_yield >= 0.6 and current_price <= 3000:
+            decision = "buy the stock"
+        else:
+            decision = "do not buy the stock"
+    
+    return decision
+
+
+def create_agent():
+    # Create prompt template
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", "Answer not more than 20 words."),
+            ("system", "Answer not more than 30 words. All number must be in decimal., never use percentage (%)"),
             MessagesPlaceholder("history", optional=True),
             ("human", "{input}"),
             MessagesPlaceholder("agent_scratchpad"),
@@ -70,45 +90,95 @@ def create_agent(memory):
     )
 
     # Create the agent with tools
-    tools = [saving, investing]
+    tools = [investing, calculate_dy, entry_criteria]
     agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, memory=memory, verbose=True)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
     return agent_executor
 
 
-def ask_llm(query_body: ChatQuery, llm):
+def convert_history_string(history):
+    history_input = []
+    history_output = []
+    
+    if history != "":
+        # Convert history to input and output
+        history_list = history.replace(
+            "\nHuman: ", "---split---Human: "
+        ).replace("\nAI: ", "---split---AI: ").replace("\nSystem: ", "---split---System: ")
+        history_list = history_list.split("---split---")
+
+        for m in history_list:
+            if m[:7] == "Human: ":
+                history_input.append(m[7:])
+            elif m[:4] == "AI: ":
+                history_output.append(m[4:])
+            elif m[:8] == "System: ":
+                history_input.append(m[8:])
+                history_output.append("")
+
+    return history_input, history_output
+
+
+def add_history_to_memory(history_memory, memory):
+    # Convert history in string to list
+    history_input, history_output = convert_history_string(history_memory)
+
+    # Add chat history to memory
+    if len(history_input) > 0:
+        for inp, outp in zip(history_input, history_output):
+            memory.save_context({"input": inp}, {"output": outp})
+    
+        # Load memory variables
+        loaded_memory = memory.load_memory_variables({})
+        # Convert history in string to list after loading memory variables
+        history_input, history_output = convert_history_string(loaded_memory['history'])
+        # Add chat history to memory
+        memory.clear()
+        if len(history_input) > 0:
+            for inp, outp in zip(history_input, history_output):
+                memory.save_context({"input": inp}, {"output": outp})
+    
+    return memory
+
+
+def ask_llm(query_body: ChatQuery):
     # Assign memory
     memory = choose_memory(query_body.memory, query_body.memory_arg)
     
-    # Add chat history
-    history_input = query_body.history_input
-    history_output = query_body.history_output
-    if history_input is not None:
-        for inp, outp in zip(history_input, history_output):
-            memory.save_context({"input": inp}, {"output": outp})
+    memory = add_history_to_memory(query_body.history_memory, memory)
 
     # Ask the llm
-    agent_executor = create_agent(memory)
-    response = agent_executor.invoke({"input": query_body.query})
+    agent_executor = create_agent()
+    response = agent_executor.invoke(
+        {"input": query_body.query, "history": memory.chat_memory.messages}
+    )
+
+    # Answer
+    output = response["output"]
     
+    # Convert memory to string
     chat_history = ""
     for message in memory.chat_memory.messages:
         role = type(message).__name__.replace("Message", "")
         content = message.content
-        chat_history.append(f"{role}: {content}\n")
+        chat_history = chat_history + f"{role}: {content}\n"
     chat_history = chat_history[:-1]
-    
 
-    # If without agent
+    # Add new chat history
+    chat_history = chat_history + "\nHuman: " + query_body.query + "\nAI: " + output
+    
+    result = {"output": output, "history": chat_history}
+
+    # Use this if without agent
     # conversation = ConversationChain(llm=llm, memory=memory)
     # response = conversation(query_body.query)
 
-    return response
+    return result
 
 
 def input_query(query_body: ChatQuery):
     # Input the query and history to llm
-    response = ask_llm(query_body, llm)
+    response = ask_llm(query_body)
     
     return response
