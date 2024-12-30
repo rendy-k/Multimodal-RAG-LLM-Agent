@@ -1,5 +1,6 @@
-# Fine-tuning-LLMs
+# Multimodal RAG and AI Agent
 
 The application provides a chatbot with conversation memories.
 In the backend, it has an AI Agent to call tools/functions.
-The tools are fine-tuned LLM, Hugging Face Pipeline, custom function, and wrapped AI.
+
+[Work in progress]
