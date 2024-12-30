@@ -1,6 +1,7 @@
 from os import environ
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import ConversationChain
 from langchain.memory import (
@@ -10,8 +11,6 @@ from langchain.memory import (
     ConversationSummaryBufferMemory,
     ConversationTokenBufferMemory,
 )
-from langchain_core.tools import tool
-from langchain.agents import create_tool_calling_agent, AgentExecutor
 from validator import ChatQuery
 
 # Read API KEY
