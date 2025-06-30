@@ -1,13 +1,13 @@
 import uvicorn
 from fastapi import FastAPI
-from validator import ChatQuery
-import functions
+from features.validator import ChatQuery
+import features.ai_agent as ai_agent
 
 app = FastAPI()
 
 @app.post("/query/")
 def input_question(query_body: ChatQuery):
-    response = functions.input_query(query_body)
+    response = ai_agent.input_query(query_body)
     return response
 
 if __name__ == '__main__':

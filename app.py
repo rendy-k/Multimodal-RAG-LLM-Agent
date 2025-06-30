@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from validator import ChatQuery
+from features.validator import ChatQuery
 
 URL = "http://localhost:8000/query/"
 
@@ -40,14 +40,14 @@ def main():
         # Setting the LLM       
         with st.form("setting"):
             temperature = st.number_input("Temperature", value=1.0, step=0.1)
-            max_tokens = st.number_input("Maximum tokens", value=100, step=1)
+            max_tokens = st.number_input("Maximum tokens", value=30, step=1)
             memory = st.selectbox(
                     "Conversation memory",
                     ["Buffer", "Buffer Window", "Summary", "Summary Buffer", "Token"],
-                    index=0
+                    index=1
                 )
             memory_arg = st.number_input(
-                    "Memory arguments", value=50, step=1,
+                    "Memory arguments", value=3, step=1,
                     help="Buffer Window: k\n\nSummary Buffer: max_token_limit\n\nToken: max_token_limit"
                 )
             save_setting = st.form_submit_button("Save setting")
