@@ -2,3 +2,4 @@
 .vscode
 others
 *.pyc
+saved_models/
