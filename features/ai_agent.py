@@ -2,12 +2,15 @@ from os import environ
 from dotenv import load_dotenv
 # from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
-from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain.agents import AgentType, AgentExecutor, initialize_agent, create_tool_calling_agent
+from langchain_core.tools import Tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import ConversationChain
 from langchain_core.tools import tool
 from features.validator import ChatQuery
 from features.chat_memory import choose_memory, add_history_to_memory, convert_memory_to_string
+from features.rag import loan_rag
+
 
 # Read API KEY
 load_dotenv()
@@ -62,6 +65,63 @@ def entry_criteria(dividend_yield: float, current_price: int, yearly_payout: boo
     
     return decision
 
+# @tool
+def tool_product_rag(question: str) -> str:
+    """
+    Contains the LangFund loan product knowledge.
+    """
+    answer = product_rag.invoke(question)
+    return answer
+
+def general_knowledge(query: str) -> str:
+    return llm.predict(query)
+
+# Create tools
+tools = [
+    Tool(
+        name="LangFund product description",
+        func=tool_product_rag,
+        description="Contains the LangFund loan product knowledge.",
+    ),
+    Tool(
+        name="General Knowledge",
+        func=general_knowledge,
+        description="Use this when the question is not about LangFund loan products."
+    )
+]
+
+# Load the RAG
+product_rag = loan_rag(llm)
+
+def sales_agent():
+    system_prompt = """
+    You are a helpful assistant.
+    You have access to the following tools:\n{tools}. When you need to use a tool, call it exactly by name: {tool_names}.
+    If the the tool does not provide the answer to the question/input. If you do not know the answer, say that the answer is not provided. 
+    The answer is less than 50 words.
+    """
+
+    # Create prompt template
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            MessagesPlaceholder("chat_history", optional=True),
+            ("human", "{input}"),
+            MessagesPlaceholder("agent_scratchpad"),
+        ]
+    )
+
+    agent = initialize_agent(
+        tools,
+        llm,
+        agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
+        verbose=True,
+        agent_kwargs={"prompt": prompt},
+        handle_parsing_errors=True
+    )
+
+    return agent
+
 
 def create_agent():
     # Create prompt template
@@ -83,8 +143,8 @@ def create_agent():
 
 
 # Create the agent
-agent_executor = create_agent()
-
+# agent_executor = create_agent()
+sales_agent_executor = sales_agent()
 
 def ask_llm(query_body: ChatQuery, ai_agent=True):
     if ai_agent == True:
@@ -94,8 +154,8 @@ def ask_llm(query_body: ChatQuery, ai_agent=True):
         memory = add_history_to_memory(query_body.history_memory, memory)
 
         # Ask the llm
-        response = agent_executor.invoke(
-            {"input": query_body.query, "history": memory.chat_memory.messages}
+        response = sales_agent_executor.invoke(
+            {"input": query_body.query, "chat_history": memory.chat_memory.messages}
         )
 
         # Get the Answer
