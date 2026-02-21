@@ -2,27 +2,28 @@ from os import environ
 from dotenv import load_dotenv
 # from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
-from langchain.agents import AgentType, AgentExecutor, initialize_agent, create_tool_calling_agent
-from langchain_core.tools import Tool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.chains import ConversationChain
+from langchain.agents import create_agent
+from langchain_core.tools import Tool, StructuredTool
 from langchain_core.tools import tool
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from features.validator import ChatQuery
-from features.chat_memory import choose_memory, add_history_to_memory, convert_memory_to_string
-from features.rag import loan_rag
+from features.chat_memory import update_memory, prepare_memory, choose_memory, add_history_to_memory, convert_memory_to_string
+# from features.rag import loan_rag
 
 
 # Read API KEY
 load_dotenv()
 api_key_groq = environ['API_GROG']
+model_name = environ.get('MODEL_NAME', 'openai/gpt-oss-120b')
+temperature = environ.get('TEMPERATURE', 1)
+max_tokens = environ.get('MAX_TOKENS', 200)
 
-
-def load_llm():
+def load_llm(model_name):
     # Load LLM
     llm = ChatGroq(
-        model="llama3-70b-8192",
-        temperature=1,
-        max_tokens=50,
+        model=model_name,
+        temperature=temperature,
+        max_tokens=max_tokens,
         api_key=api_key_groq
     )
     # llm = ChatOpenAI(model="gpt-4o-mini", api_key=TOKEN_OPENAI, temperature=1, max_tokens=50)
@@ -31,18 +32,18 @@ def load_llm():
 
 
 # Load llm
-llm = load_llm()
+llm = load_llm(model_name)
 
 
 # Create tools
-@tool
+# @tool
 def investing(capital: int, tenure: float, dividend_yield: float) -> int:
     """Calculate the final value of investment given the capital, interest rate per annum, and tenure.
     If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal."""
     invest = capital * (1 + dividend_yield)**tenure
     return invest
 
-@tool
+# @tool
 def calculate_dy(current_price: int, dividend: int) -> float:
     """Calculate dividend yield based on the dividend and and current price."""
     dividend_yield = round(dividend/current_price, 3)
@@ -66,12 +67,12 @@ def entry_criteria(dividend_yield: float, current_price: int, yearly_payout: boo
     return decision
 
 # @tool
-def tool_product_rag(question: str) -> str:
-    """
-    Contains the LangFund loan product knowledge.
-    """
-    answer = product_rag.invoke(question)
-    return answer
+# def tool_product_rag(question: str) -> str:
+#     """
+#     Contains the LangFund loan product knowledge.
+#     """
+#     answer = product_rag.invoke(question)
+#     return answer
 
 def general_knowledge(query: str) -> str:
     return llm.predict(query)
@@ -79,19 +80,27 @@ def general_knowledge(query: str) -> str:
 # Create tools
 tools = [
     Tool(
-        name="LangFund product description",
-        func=tool_product_rag,
-        description="Contains the LangFund loan product knowledge.",
+        name="investing",
+        func=investing,
+        description="Calculate the final value of investment given the capital, interest rate per annum, and tenure. If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal.",
     ),
     Tool(
-        name="General Knowledge",
+        name="calculate_dy",
+        func=calculate_dy,
+        description="Calculate dividend yield based on the dividend and and current price.."
+    )
+]
+
+tools = [
+    Tool(
+        name="general_knowledge",
         func=general_knowledge,
         description="Use this when the question is not about LangFund loan products."
     )
 ]
 
 # Load the RAG
-product_rag = loan_rag(llm)
+# product_rag = loan_rag(llm)
 
 def sales_agent():
     system_prompt = """
@@ -102,74 +111,56 @@ def sales_agent():
     """
 
     # Create prompt template
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder("chat_history", optional=True),
-            ("human", "{input}"),
-            MessagesPlaceholder("agent_scratchpad"),
-        ]
-    )
-
-    agent = initialize_agent(
-        tools,
-        llm,
-        agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION,
-        verbose=True,
-        agent_kwargs={"prompt": prompt},
-        handle_parsing_errors=True
+    agent = create_agent(
+        model=llm,
+        tools=tools,
+        system_prompt=system_prompt
     )
 
     return agent
 
 
-def create_agent():
-    # Create prompt template
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", f"Answer not more than 50 words. All number must be in decimal, never use percentage (%)"),
-            MessagesPlaceholder("history", optional=True),
-            ("human", "{input}"),
-            MessagesPlaceholder("agent_scratchpad"),
-        ]
-    )
+# def initiate_agent():
+#     # Create prompt template
+#     prompt = ChatPromptTemplate.from_messages(
+#         [
+#             ("system", f"Answer not more than 50 words. All number must be in decimal, never use percentage (%)"),
+#             MessagesPlaceholder("history", optional=True),
+#             ("human", "{input}"),
+#             MessagesPlaceholder("agent_scratchpad"),
+#         ]
+#     )
 
-    # Create the agent with tools
-    tools = [investing, calculate_dy, entry_criteria]
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+#     # Create the agent with tools
+#     tools = [investing, calculate_dy, entry_criteria]
+#     agent = create_tool_calling_agent(llm, tools, prompt)
+#     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-    return agent_executor
+#     return agent_executor
 
 
 # Create the agent
-# agent_executor = create_agent()
 sales_agent_executor = sales_agent()
 
 def ask_llm(query_body: ChatQuery, ai_agent=True):
     if ai_agent == True:
-        # Assign memory
-        memory = choose_memory(llm, query_body.memory, query_body.memory_arg)
-        
-        memory = add_history_to_memory(query_body.history_memory, memory)
+        # Prepare the memory history
+        messages = prepare_memory(query_body.history_memory)
+        messages.append(("user", query_body.query))
 
-        # Ask the llm
-        response = sales_agent_executor.invoke(
-            {"input": query_body.query, "chat_history": memory.chat_memory.messages}
-        )
+        # Invoke the LLM
+        response = sales_agent_executor.invoke({"messages": messages})
 
         # Get the Answer
-        output = response["output"]
+        output = response['messages'][-1].content
+        reasoning = response['messages'][-1].additional_kwargs["reasoning_content"]
         
-        # Convert memory to string
-        chat_history = convert_memory_to_string(memory, query_body.query, output)
-        
-        result = {"output": output, "history": chat_history}
+        # Update memory
+        chat_history = update_memory(query_body.history_memory, query_body.query, output)
+        result = {"output": output, "history": chat_history, "reasoning": reasoning}
 
     else:
-        # Use this if without agent
-        conversation = ConversationChain(llm=llm, memory=memory)
-        response = conversation(query_body.query)
+        pass
 
     return result
 

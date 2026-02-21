@@ -37,23 +37,16 @@ def main():
         # Button to show history
         show_history = st.button("Show history")
 
+        # Button to show history
+        show_reasoning = st.button("Show reasonings")
+
         # Setting the LLM       
-        with st.form("setting"):
-            temperature = st.number_input("Temperature", value=1.0, step=0.1)
-            max_tokens = st.number_input("Maximum tokens", value=30, step=1)
-            memory = st.selectbox(
-                    "Conversation memory",
-                    ["Buffer", "Buffer Window", "Summary", "Summary Buffer", "Token"],
-                    index=1
-                )
-            memory_arg = st.number_input(
-                    "Memory arguments", value=3, step=1,
-                    help="Buffer Window: k\n\nSummary Buffer: max_token_limit\n\nToken: max_token_limit"
-                )
-            save_setting = st.form_submit_button("Save setting")
+        st.markdown("### Status")
+        
+
 
     # Application main interface
-    st.title("Financial AI Chatbot")
+    st.title("Travel Chatbot")
 
     # Display chats
     for message in st.session_state.history:
@@ -73,10 +66,6 @@ def main():
         body = {
             "query": query,
             "history_memory": st.session_state.history_memory,
-            "temperature": round(temperature, 3),
-            "max_tokens": max_tokens,
-            "memory": memory,
-            "memory_arg": memory_arg,
         }
 
         response = request_llm(body)
@@ -92,6 +81,9 @@ def main():
     # Show history if the button is clicked
     if show_history:
         show_history_memory()
+    
+    if show_reasoning:
+        pass
 
 
 if __name__ == "__main__":
