@@ -1,5 +1,7 @@
 import streamlit as st
 import requests
+import pandas as pd
+import json
 from features.validator import ChatQuery
 
 URL = "http://localhost:8000/query/"
@@ -18,6 +20,30 @@ def show_history_memory():
     if "history_memory" in st.session_state:
         st.write(st.session_state.history_memory.replace("\n", "\n\n"))
 
+# Show reasoning
+@st.dialog("AI reasoning")
+def show_ai_reasoning():
+    if "ai_reasoning" in st.session_state:
+        st.write(st.session_state.ai_reasoning.replace("\n", "\n\n"))
+
+# Load booking data
+def load_booking_data():
+    booking_data = pd.read_csv("database/booking_status.csv")
+    booking_data = booking_data.to_json(orient="records")
+    booking_data = json.loads(booking_data)
+    
+    status_text = ""
+    for item in booking_data:
+        for key, value in item.items():
+            if value is not None:
+                if key != "name":
+                    status_text += f"- {key}: {value}\n"
+                else:
+                    status_text += f"**{key}: {value}**\n"
+        status_text += "\n\n"
+    st.session_state.booking = status_text
+
+
 def set_session_state():
     # Prepare the LLM model
     if "conversation" not in st.session_state:
@@ -30,6 +56,12 @@ def set_session_state():
     if "history_memory" not in st.session_state:
         st.session_state.history_memory = ""
 
+    if "ai_reasoning" not in st.session_state:
+        st.session_state.ai_reasoning = ""
+
+    if "booking" not in st.session_state:
+        st.session_state.booking = ""
+
 
 def main():
     # Sidebar
@@ -38,12 +70,14 @@ def main():
         show_history = st.button("Show history")
 
         # Button to show history
-        show_reasoning = st.button("Show reasonings")
+        show_reasoning = st.button("Show reasoning")
 
-        # Setting the LLM       
+        # Status       
         st.markdown("### Status")
-        
+        with st.expander("Booking status"):
+            st.markdown(st.session_state.booking)
 
+        refresh_status = st.button("Refresh")
 
     # Application main interface
     st.title("Travel Chatbot")
@@ -61,7 +95,6 @@ def main():
         with st.chat_message("user"):
             st.markdown(query)
 
-       
         # Request the LLM
         body = {
             "query": query,
@@ -78,13 +111,25 @@ def main():
         # Extract the latest history memory
         st.session_state.history_memory = response["history"]
 
+        # Append AI reasonings
+        st.session_state.ai_reasoning += (
+            f"HUMAN: {query}\n\nAI REASONING: "
+            + response["reasoning"]
+            + "\n\nAI: " + {response['output']}
+            + "\n\n==========\n\n"
+        )
+
     # Show history if the button is clicked
     if show_history:
         show_history_memory()
     
+    # Show reasoning if the button is click
     if show_reasoning:
-        pass
+        show_ai_reasoning()
 
+    # Refresh loading status data
+    if refresh_status:
+        load_booking_data()
 
 if __name__ == "__main__":
     set_session_state()
