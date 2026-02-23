@@ -112,10 +112,14 @@ def main():
         st.session_state.history_memory = response["history"]
 
         # Append AI reasonings
+        print(type(query), type(response["reasoning"]), type(response['output']))
+        print(query)
+        print(response["reasoning"])
+        print(response['output'])
         st.session_state.ai_reasoning += (
-            f"HUMAN: {query}\n\nAI REASONING: "
-            + response["reasoning"]
-            + "\n\nAI: " + {response['output']}
+            f"HUMAN: {query}\n\n"
+            f"AI REASONING: {response['reasoning']}\n\n"
+            f"AI: {response['output']}"
             + "\n\n==========\n\n"
         )
 

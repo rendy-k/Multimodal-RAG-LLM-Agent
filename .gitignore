@@ -5,3 +5,4 @@ others
 saved_models/
 others/
 .DS_Store
+database/booking_status.csv

@@ -3,15 +3,14 @@ from dotenv import load_dotenv
 # from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
-from langchain_core.tools import Tool, StructuredTool
-from langchain_core.tools import tool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+import logging
+from langchain_core.tools import Tool
 from features.validator import ChatQuery
-from features.chat_memory import update_memory, prepare_memory, choose_memory, add_history_to_memory, convert_memory_to_string
-# from features.rag import loan_rag
+from features.chat_memory import update_memory, prepare_memory
+from features.rag import activities_rag
 
 
-# Read API KEY
+# Read the environment
 load_dotenv()
 api_key_groq = environ['API_GROG']
 model_name = environ.get('MODEL_NAME', 'openai/gpt-oss-120b')
@@ -36,43 +35,12 @@ llm = load_llm(model_name)
 
 
 # Create tools
-# @tool
-def investing(capital: int, tenure: float, dividend_yield: float) -> int:
-    """Calculate the final value of investment given the capital, interest rate per annum, and tenure.
-    If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal."""
-    invest = capital * (1 + dividend_yield)**tenure
-    return invest
-
-# @tool
-def calculate_dy(current_price: int, dividend: int) -> float:
-    """Calculate dividend yield based on the dividend and and current price."""
-    dividend_yield = round(dividend/current_price, 3)
-    return dividend_yield
-
-@tool
-def entry_criteria(dividend_yield: float, current_price: int, yearly_payout: bool) -> str:
-    """Decide whether to buy the stock (entry) based on the dividend yield, current price, and yearly payout.
-    If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal."""
-    if yearly_payout == True:
-        if dividend_yield >= 0.04 or current_price <= 1000:
-            decision = "buy the stock"
-        else:
-            decision = "do not buy the stock"
-    else:
-        if dividend_yield >= 0.6 and current_price <= 3000:
-            decision = "buy the stock"
-        else:
-            decision = "do not buy the stock"
-    
-    return decision
-
-# @tool
-# def tool_product_rag(question: str) -> str:
-#     """
-#     Contains the LangFund loan product knowledge.
-#     """
-#     answer = product_rag.invoke(question)
-#     return answer
+def tool_activities_rag(question: str) -> str:
+    """
+    Contains the information of activities and attractions.
+    """
+    answer = product_rag.invoke(question)
+    return answer
 
 def general_knowledge(query: str) -> str:
     return llm.predict(query)
@@ -80,63 +48,34 @@ def general_knowledge(query: str) -> str:
 # Create tools
 tools = [
     Tool(
-        name="investing",
-        func=investing,
-        description="Calculate the final value of investment given the capital, interest rate per annum, and tenure. If the dividend yield is in percentage (%), than divide it with 100 to convert it to be decimal.",
-    ),
-    Tool(
-        name="calculate_dy",
-        func=calculate_dy,
-        description="Calculate dividend yield based on the dividend and and current price.."
+        name="tool_activities_rag",
+        func=tool_activities_rag,
+        description="Contains the information of activities and attractions.",
     )
 ]
 
-tools = [
-    Tool(
-        name="general_knowledge",
-        func=general_knowledge,
-        description="Use this when the question is not about LangFund loan products."
-    )
-]
 
 # Load the RAG
-# product_rag = loan_rag(llm)
+product_rag = activities_rag(llm)
+
 
 def sales_agent():
     system_prompt = """
-    You are a helpful assistant.
+    You are a travel assistant.
+    If you think that the latest question is a follow-up question referring to the previous chat history, create a new question enhanced by the chat history before calling any tools.
     You have access to the following tools:\n{tools}. When you need to use a tool, call it exactly by name: {tool_names}.
-    If the the tool does not provide the answer to the question/input. If you do not know the answer, say that the answer is not provided. 
-    The answer is less than 50 words.
+    If you do not know the answer, say that the answer is not provided. 
+    The answer must be less than 80 words.
     """
 
     # Create prompt template
     agent = create_agent(
         model=llm,
         tools=tools,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
     )
 
     return agent
-
-
-# def initiate_agent():
-#     # Create prompt template
-#     prompt = ChatPromptTemplate.from_messages(
-#         [
-#             ("system", f"Answer not more than 50 words. All number must be in decimal, never use percentage (%)"),
-#             MessagesPlaceholder("history", optional=True),
-#             ("human", "{input}"),
-#             MessagesPlaceholder("agent_scratchpad"),
-#         ]
-#     )
-
-#     # Create the agent with tools
-#     tools = [investing, calculate_dy, entry_criteria]
-#     agent = create_tool_calling_agent(llm, tools, prompt)
-#     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-#     return agent_executor
 
 
 # Create the agent
@@ -147,13 +86,25 @@ def ask_llm(query_body: ChatQuery, ai_agent=True):
         # Prepare the memory history
         messages = prepare_memory(query_body.history_memory)
         messages.append(("user", query_body.query))
+        current_chat_length = len(messages)
 
         # Invoke the LLM
         response = sales_agent_executor.invoke({"messages": messages})
 
         # Get the Answer
         output = response['messages'][-1].content
-        reasoning = response['messages'][-1].additional_kwargs["reasoning_content"]
+        
+        # Get the reasoning
+        reasoning = ""
+        for chat_i in range(current_chat_length, len(response['messages'])):
+            try:
+                reasoning += (
+                    response['messages'][chat_i].__class__.__name__ + ": "
+                    + response['messages'][chat_i].content
+                    + response['messages'][chat_i].additional_kwargs.get("reasoning_content", "") + "\n"
+                )
+            except:
+                pass
         
         # Update memory
         chat_history = update_memory(query_body.history_memory, query_body.query, output)
