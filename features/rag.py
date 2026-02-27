@@ -34,7 +34,7 @@ def activities_rag(llm):
     retriever = load_db.as_retriever(search_kwargs={"k": 5})
 
     def join_text(docs):
-        return "\n\n".join([d.metadata["content"] for d in docs])
+        return "\n\n".join([d.page_content for d in docs])
 
     rag_chain = (
         {"context": retriever | join_text, "question": RunnablePassthrough()}

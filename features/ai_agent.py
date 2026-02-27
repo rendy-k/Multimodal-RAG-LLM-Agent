@@ -1,9 +1,9 @@
 from os import environ
 from dotenv import load_dotenv
+import json
 # from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
-import logging
 from langchain_core.tools import Tool
 from features.validator import ChatQuery
 from features.chat_memory import update_memory, prepare_memory
@@ -13,9 +13,11 @@ from features.rag import activities_rag
 # Read the environment
 load_dotenv()
 api_key_groq = environ['API_GROG']
-model_name = environ.get('MODEL_NAME', 'openai/gpt-oss-120b')
-temperature = environ.get('TEMPERATURE', 1)
-max_tokens = environ.get('MAX_TOKENS', 200)
+config = json.load(open("configuration.json"))
+model_name = config["model_name"]
+temperature = config["temperature"]
+max_tokens = config["max_tokens"]
+window_buffer_memory = config["window_buffer_memory"]
 
 def load_llm(model_name):
     # Load LLM
