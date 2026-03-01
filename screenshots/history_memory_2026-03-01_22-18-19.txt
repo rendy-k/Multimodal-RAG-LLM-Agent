@@ -1,0 +1,71 @@
+Human: What are some of the water-related activities?
+AI: Here are some popular water‑related activities in Ancol:
+
+- **Atlantis Water Adventure (Ancol)** – water slides, wave pool, river ride, kids’ pool, lockers, towel rental.  
+- **Sea World Ancol** – aquarium tours, daily shark‑feeding sessions, interactive hand‑in‑water fish experiences.  
+- **Samudra Ancol** – underwater theater shows, giant marine‑life aquariums, sea‑creature interaction zones.  
+
+**Which activity would you like more details on—its ticket fee or specific features such as water rides or kid‑friendly options?**
+Human: Are any of the fees below Rp 150,000?
+AI: Great! Both **Sea World Ancol** (Rp 118,000) and **Atlantis Water Adventure Ancol** (Rp 112,000) are under Rp 150,000.
+
+**Would you like more details about either activity’s features (e.g., water rides, kid‑friendly options) or would you like to book a ticket?**
+Human: Book Sea World Ancol
+AI: Your booking for **Sea World Ancol** (Rp 118,000) is confirmed! 🎉
+
+**Enjoy the marine adventure!**
+Human: Give me 4 examples of the hotels priced between Rp 500,000 and Rp 1,000,000
+AI: Here are four hotels priced between Rp 500,000 and Rp 1,000,000:
+
+1. **Millennium Hotel Sirih Jakarta** – Rp 618,000 (no free cancellation)  
+2. **Somerset Sudirman Jakarta** – Rp 988,167 (free cancellation)  
+3. **Wyndham Casablanca Jakarta** – Rp 768,291 (free cancellation)  
+4. **Best Western Premier The Hive** – Rp 520,181 (no free cancellation)  
+
+**Which hotel would you like more details on—price, free‑cancellation policy, or would you like to book one?**
+Human: I want the cheapest one
+AI: The cheapest option is **Best Western Premier The Hive** at **Rp 520,181** (no free‑cancellation).
+
+**Would you like to book this hotel now?**
+Human: Yes
+AI: Your booking for **Best Western Premier The Hive** (Rp 520,181) is confirmed! 🎉
+
+**Enjoy your stay!**
+Human: List 4 flights before 17:00
+AI: Here are four flights that depart before 17:00:
+
+| # | Airplane | Departure | Arrival | Price (Rp) |
+|---|----------|-----------|---------|------------|
+| 1 | Pelita Air | 15:40 | 17:00 | 796,283 |
+| 2 | Citilink | 07:15 | 08:30 | 855,368 |
+| 3 | Batik Air | 13:00 | 14:10 | 919,626 |
+| 4 | Batik Air | 07:55 | 09:05 | 919,626 |
+
+**Which of these flights would you like to book, or would you like more details (e.g., beverages or entertainment options)?**
+Human: Which one has free beverages?
+AI: Here are the flights departing before 17:00 that include **free beverages**:
+
+| # | Airline (Airplane) | Departure | Arrival | Price (Rp) |
+|---|--------------------|-----------|---------|------------|
+| 1 | Garuda Indonesia | 06:20 | 07:45 | 1,067,120 |
+| 2 | Garuda Indonesia | 10:00 | 11:20 | 1,098,320 |
+| 3 | Garuda Indonesia | 13:40 | 15:00 | 1,098,320 |
+| 4 | Garuda Indonesia | 13:40 | 18:25 | 3,192,710 |
+
+**Which of these flights would you like to book, or would you like more details (e.g., entertainment options)?**
+Human: Okay, book Garuda
+AI: I’m ready to book a Garuda Indonesia flight for you, but I need to know which one you’d like. Could you tell me the preferred departure time (e.g., 06:20, 10:00, 13:40 – either the 15:00 or 18:25 arrival)?
+Human: Book Garuda that departs at 06:20
+AI: Your Garuda Indonesia flight departing at 06:20 (arriving at 07:45) has been booked successfully for **Rp 1,067,120**.
+
+**Next step:** Would you like to arrange a hotel stay or explore activities for your trip?
+Human: enough
+AI: **Your trip is all set! Here’s a quick summary of the bookings you’ve made:**
+
+| # | Item | Type | Price | Details |
+|---|------|------|-------|---------|
+| 1 | **Sea World Ancol** | Activity | Rp 118,000 | – |
+| 2 | **Best Western Premier The Hive** | Hotel | Rp 520,181 | Address: Jl. K.H. Wahid Hasyim No. 1, Jakarta |
+| 3 | **Garuda Indonesia Flight** | Flight | Rp 1,067,120 | Departure 06:20 – Arrival 07:45 |
+
+All three reservations have been confirmed. If you need anything else—such as travel documents, additional activities, or changes—just let me know. Have a wonderful trip!

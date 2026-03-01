@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import json
+from datetime import datetime
 from features.validator import ChatQuery
 
 URL = "http://localhost:8000/query/"
@@ -41,8 +42,7 @@ def load_booking_data():
                 else:
                     status_text += f"**{key}: {value}**\n"
         status_text += "\n\n"
-    st.session_state.booking[0] = status_text
-    st.session_state.booking[1] = booking_data
+    st.session_state.booking = status_text
 
 
 def set_session_state():
@@ -52,7 +52,7 @@ def set_session_state():
 
     # Chat history
     if "history" not in st.session_state:
-        st.session_state.history = []
+        st.session_state.history = [{"role": "assistant", "content": "Hi! What activity are you interested in? You can search by ticket price or by features, such as water activities or kid-friendly options."}]
 
     if "history_memory" not in st.session_state:
         st.session_state.history_memory = ""
@@ -61,7 +61,19 @@ def set_session_state():
         st.session_state.ai_reasoning = ""
 
     if "booking" not in st.session_state:
-        st.session_state.booking = ["", {}]
+        st.session_state.booking = ""
+
+
+def save_history_reasoning():
+    # Get current datetime string
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    # Write the content to the file
+    with open(f"history_memory_{current_time}.txt", "w", encoding="utf-8") as f:
+        f.write(st.session_state.history_memory)
+
+    with open(f"reasonings_{current_time}.txt", "w", encoding="utf-8") as f:
+        f.write(st.session_state.ai_reasoning)
 
 
 def main():
@@ -73,16 +85,19 @@ def main():
         # Button to show history
         show_reasoning = st.button("Show reasoning")
 
+        # Button to save history and reasoning
+        save_history = st.button("Save history and reasonings")
+
         # Status       
         st.markdown("### Status")
         with st.expander("Booking status"):
-            st.markdown(st.session_state.booking[0])
+            st.markdown(st.session_state.booking)
 
         refresh_status = st.button("Refresh")
 
     # Application main interface
     st.title("✈️ Travel Chatbot 🏨")
-    st.markdown("This travel chatbot guides users to find (1) activities, (2) hotels, and (3) flights information and book them.")
+    st.markdown("This travel chatbot guides users to find (1) activities, (2) hotels, and (3) flights information in Jakarta and book them.")
 
     # Display chats
     for message in st.session_state.history:
@@ -96,15 +111,11 @@ def main():
         # Add user question
         with st.chat_message("user"):
             st.markdown(query)
-
-        # Prepare the booking status
-        booking = st.session_state.booking[1]
         
         # Request the LLM
         body = {
             "query": query,
             "history_memory": st.session_state.history_memory,
-            "booking": booking
         }
 
         response = request_llm(body)
@@ -137,6 +148,10 @@ def main():
     # Show reasoning if the button is click
     if show_reasoning:
         show_ai_reasoning()
+
+    # Save history and reasoning
+    if save_history:
+        save_history_reasoning()
 
     # Refresh loading status data
     if refresh_status:

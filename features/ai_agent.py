@@ -110,11 +110,11 @@ product_rag = activities_rag(llm)
 
 # Chatbot to guide the booking
 booking_prompts = {
-    "activity": "After you get the answer for users, add a follow-up question (maximum 20 sentences) to guide users to describe their interested activity by ticket fee or features (such as water activities or kid-friendly options) if not yet mentioned. If the name and price are mentioned, can offer to book. ",
+    "activity": "After you get the answer for users, add a follow-up question (maximum 20 words) to guide users to describe their interested activity by 'ticket fee' or 'features: water activities or kid-friendly options'. if not yet mentioned. If the name and price are mentioned, can offer to book. Do not mix with hotel or flight. ",
 
-    "hotel": "After you get the answer for users, add a follow-up question (maximum 20 sentences) to guide users to describe their interested hotel by price or free cancellation availability' if not yet mentioned. If the name and price are mentioned, can offer to book. ",
+    "hotel": "After you get the answer for users, add a follow-up question (maximum 20 words) to guide users to describe their interested 'hotel' by 'price' or 'free cancellation availability' if not yet mentioned. If the name and price are mentioned, can offer to book. Do not mix with activity or flight. Do not give other kinds of follow-up question. ",
 
-    "flight": "After you get the answer for users, add a follow-up question (maximum of 20 sentences) to guide users to describe their interested flight by price, airplane name, departure time, arrival time, beverages availability, or entertainment availability if not yet mentioned. If the name and price are mentioned, can offer to book. ",
+    "flight": "After you get the answer for users, add a follow-up question (maximum of 20 words) to guide users to describe their interested flight by price, airplane name, departure time, arrival time, beverages availability, or entertainment availability if not yet mentioned. If the name and price are mentioned, can offer to book. Do not mix with activity or hotel. ",
 }
 
 
@@ -124,7 +124,6 @@ def sales_agent():
     If you think that the latest question is a follow-up question referring to the previous chat history, create a new question enhanced by the chat history before calling any tools.
     You have access to the relevant tools. When you need to use a tool, call it exactly by the name.
     If you do not know the answer, say that the answer is not provided. 
-    The answer must be less than 150 words.
     """
 
     # Create prompt template
@@ -146,7 +145,7 @@ def ask_llm(query_body: ChatQuery, ai_agent=True):
         # Prepare the memory history
         messages = prepare_memory(query_body.history_memory)
         current_chat_length = len(messages)
-        messages = messages[:min(window_buffer_memory, current_chat_length)]
+        messages = messages[max(0,current_chat_length-6):]
         messages.append(("user", query_body.query))
 
         # Provide the booking status
@@ -165,7 +164,7 @@ def ask_llm(query_body: ChatQuery, ai_agent=True):
         elif "flight" not in booking_status:
             booking_status_prompt = booking_prompts["flight"]
         else:
-            booking_status_prompt = ""
+            booking_status_prompt = f"If the user does not ask anything else, or closing the conversation, summarize the booking status based on this only: {booking_data}" 
 
         if booking_status_prompt != "":
             messages.insert(0, ("system", booking_status_prompt))
