@@ -8,6 +8,7 @@ from langchain_core.tools import Tool
 from features.validator import ChatQuery
 from features.chat_memory import update_memory, prepare_memory
 from features.rag import activities_rag
+from features.text2sql import hotels_flights_text2sql, execute_query
 
 
 # Read the environment
@@ -18,6 +19,7 @@ model_name = config["model_name"]
 temperature = config["temperature"]
 max_tokens = config["max_tokens"]
 window_buffer_memory = config["window_buffer_memory"]
+
 
 def load_llm(model_name):
     # Load LLM
@@ -44,8 +46,16 @@ def tool_activities_rag(question: str) -> str:
     answer = product_rag.invoke(question)
     return answer
 
-def general_knowledge(query: str) -> str:
-    return llm.predict(query)
+
+def tool_hotels_flights_generate_sql(query: str):
+    generated_sql, reasoning_sql, response = hotels_flights_text2sql(query)
+    return generated_sql
+
+
+def tools_hotels_flights_execute_sql(generated_sql: str):
+    query_result = execute_query(generated_sql)
+    return str(query_result)
+
 
 # Create tools
 tools = [
@@ -53,6 +63,16 @@ tools = [
         name="tool_activities_rag",
         func=tool_activities_rag,
         description="Contains the information of activities and attractions.",
+    ),
+    Tool(
+        name="tool_hotels_flights_generate_sql",
+        func=tool_hotels_flights_generate_sql,
+        description="Use this tool to answer questions about hotels and flights. It converts natural language into SQL queries. The argument 'query' will accept the message to convert to the SQL.",
+    ),
+    Tool(
+        name="tools_hotels_flights_execute_sql",
+        func=tools_hotels_flights_execute_sql,
+        description="Use this tool to execute SQL about hotels and flights. It accepts the generated SQL output from the tool 'tool_hotels_flights_generate_sql' and returns the list in string format.",
     )
 ]
 
@@ -67,7 +87,7 @@ def sales_agent():
     If you think that the latest question is a follow-up question referring to the previous chat history, create a new question enhanced by the chat history before calling any tools.
     You have access to the following tools:\n{tools}. When you need to use a tool, call it exactly by name: {tool_names}.
     If you do not know the answer, say that the answer is not provided. 
-    The answer must be less than 80 words.
+    The answer must be less than 150 words.
     """
 
     # Create prompt template
@@ -82,6 +102,7 @@ def sales_agent():
 
 # Create the agent
 sales_agent_executor = sales_agent()
+
 
 def ask_llm(query_body: ChatQuery, ai_agent=True):
     if ai_agent == True:
