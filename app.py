@@ -41,7 +41,8 @@ def load_booking_data():
                 else:
                     status_text += f"**{key}: {value}**\n"
         status_text += "\n\n"
-    st.session_state.booking = status_text
+    st.session_state.booking[0] = status_text
+    st.session_state.booking[1] = booking_data
 
 
 def set_session_state():
@@ -60,7 +61,7 @@ def set_session_state():
         st.session_state.ai_reasoning = ""
 
     if "booking" not in st.session_state:
-        st.session_state.booking = ""
+        st.session_state.booking = ["", {}]
 
 
 def main():
@@ -75,13 +76,13 @@ def main():
         # Status       
         st.markdown("### Status")
         with st.expander("Booking status"):
-            st.markdown(st.session_state.booking)
+            st.markdown(st.session_state.booking[0])
 
         refresh_status = st.button("Refresh")
 
     # Application main interface
-    st.title("✈️ Travel Chatbot")
-    st.markdown("🏨 This travel chatbot guides users to find (1) activities, (2) hotels, and (3) flights information and book them.")
+    st.title("✈️ Travel Chatbot 🏨")
+    st.markdown("This travel chatbot guides users to find (1) activities, (2) hotels, and (3) flights information and book them.")
 
     # Display chats
     for message in st.session_state.history:
@@ -96,10 +97,14 @@ def main():
         with st.chat_message("user"):
             st.markdown(query)
 
+        # Prepare the booking status
+        booking = st.session_state.booking[1]
+        
         # Request the LLM
         body = {
             "query": query,
             "history_memory": st.session_state.history_memory,
+            "booking": booking
         }
 
         response = request_llm(body)

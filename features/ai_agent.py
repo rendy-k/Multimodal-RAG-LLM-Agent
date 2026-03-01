@@ -1,8 +1,8 @@
 from os import environ
 from dotenv import load_dotenv
 import json
-import os
 import csv
+import pandas as pd
 from typing import Literal
 from pydantic import BaseModel
 # from langchain_openai import ChatOpenAI
@@ -78,6 +78,7 @@ class BookingInput(BaseModel):
     price: int
     remarks: str = ""
 
+
 tools = [
     Tool(
         name="tool_activities_rag",
@@ -97,7 +98,7 @@ tools = [
     StructuredTool.from_function(
         func=tools_booking,
         name="tools_booking",
-        description="Use this tool to book (1) activities, (2) hotels, and (3) flights. This tool accepts 4 arguments: name, subject, price, and remarks. 'Subject' must be 'activity', 'hotel', or 'flight'. 'Name' is the name of the subject. Add additional information in the 'remakrs', for example, hotel contains the address and free cancellation. fligh 'remarks' contains departure time and arrival time. For activities, the 'remarks' is empty string. If any of the 4 argument is not provided, then find it using the tool 'tools_hotels_flights_execute_sql'.",
+        description="Use this tool to book (1) activities, (2) hotels, and (3) flights. This tool accepts 3 arguments: name, subject, and price. 'Remark' is an optional argument. 'Subject' must be 'activity', 'hotel', or 'flight'. 'Name' is the name of the subject. Add additional information in the 'remakrs', for example, hotel contains the address and free cancellation. fligh 'remarks' contains departure time and arrival time. For activities, the 'remarks' is empty string. If any of the 3 argument is not provided, then find it using the tool 'tools_hotels_flights_execute_sql'.",
         args_schema=BookingInput,
     )
 ]
@@ -107,11 +108,21 @@ tools = [
 product_rag = activities_rag(llm)
 
 
+# Chatbot to guide the booking
+booking_prompts = {
+    "activity": "After you get the answer for users, add a follow-up question (maximum 20 sentences) to guide users to describe their interested activity by ticket fee or features (such as water activities or kid-friendly options) if not yet mentioned. If the name and price are mentioned, can offer to book. ",
+
+    "hotel": "After you get the answer for users, add a follow-up question (maximum 20 sentences) to guide users to describe their interested hotel by price or free cancellation availability' if not yet mentioned. If the name and price are mentioned, can offer to book. ",
+
+    "flight": "After you get the answer for users, add a follow-up question (maximum of 20 sentences) to guide users to describe their interested flight by price, airplane name, departure time, arrival time, beverages availability, or entertainment availability if not yet mentioned. If the name and price are mentioned, can offer to book. ",
+}
+
+
 def sales_agent():
     system_prompt = """
     You are a travel assistant.
     If you think that the latest question is a follow-up question referring to the previous chat history, create a new question enhanced by the chat history before calling any tools.
-    You have access to the following tools:\n{tools}. When you need to use a tool, call it exactly by name: {tool_names}.
+    You have access to the relevant tools. When you need to use a tool, call it exactly by the name.
     If you do not know the answer, say that the answer is not provided. 
     The answer must be less than 150 words.
     """
@@ -137,6 +148,27 @@ def ask_llm(query_body: ChatQuery, ai_agent=True):
         current_chat_length = len(messages)
         messages = messages[:min(window_buffer_memory, current_chat_length)]
         messages.append(("user", query_body.query))
+
+        # Provide the booking status
+        booking_data = pd.read_csv("database/booking_status.csv")
+        booking_data = booking_data.to_json(orient="records")
+        booking_data = json.loads(booking_data)
+
+        booking_status = []
+        for booked in booking_data:
+            booking_status.append(booked.get("subject", ""))
+        
+        if "activity" not in booking_status:
+            booking_status_prompt = booking_prompts["activity"]
+        elif "hotel" not in booking_status:
+            booking_status_prompt = booking_prompts["hotel"]
+        elif "flight" not in booking_status:
+            booking_status_prompt = booking_prompts["flight"]
+        else:
+            booking_status_prompt = ""
+
+        if booking_status_prompt != "":
+            messages.insert(0, ("system", booking_status_prompt))
 
         # Invoke the LLM
         response = sales_agent_executor.invoke({"messages": messages})
