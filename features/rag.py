@@ -31,7 +31,7 @@ def activities_rag(llm):
         ]
     )
 
-    retriever = load_db.as_retriever(search_kwargs={"k": 5})
+    retriever = load_db.as_retriever(search_kwargs={"k": 7})
 
     def join_text(docs):
         return "\n\n".join([d.page_content for d in docs])

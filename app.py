@@ -80,7 +80,8 @@ def main():
         refresh_status = st.button("Refresh")
 
     # Application main interface
-    st.title("Travel Chatbot")
+    st.title("✈️ Travel Chatbot")
+    st.markdown("🏨 This travel chatbot guides users to find (1) activities, (2) hotels, and (3) flights information and book them.")
 
     # Display chats
     for message in st.session_state.history:
@@ -109,7 +110,8 @@ def main():
         st.session_state.history.append({"role": "assistant", "content": response["output"]})
 
         # Extract the latest history memory
-        st.session_state.history_memory = response["history"]
+        if response["history"] != "":
+            st.session_state.history_memory = response["history"]
 
         # Append AI reasonings
         print(type(query), type(response["reasoning"]), type(response['output']))
@@ -134,6 +136,7 @@ def main():
     # Refresh loading status data
     if refresh_status:
         load_booking_data()
+        st.rerun()
 
 if __name__ == "__main__":
     set_session_state()
