@@ -1,0 +1,10 @@
+.env
+.vscode
+others
+*.pyc
+saved_models/
+others/
+.DS_Store
+database/booking_status.csv
+configuration.json
+screenshots/chatbot_demo.mov

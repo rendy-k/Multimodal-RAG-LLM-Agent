@@ -1,0 +1,16 @@
+langchain==1.2.10
+langchain_core==1.2.14
+langchain-groq==0.3.4
+langchain-community==0.3.27
+langchain-huggingface==0.3.1
+langchain_huggingface==1.2.0
+sentence-transformers==4.1.0
+# langchain_openai==0.1.25
+streamlit==1.40.1
+requests==2.31.0
+faiss-cpu==1.11.0.post1
+uvicorn==0.41.0
+fastapi==0.129.0
+dotenv==0.9.9
+pandas
+langchain-text-splitters==0.3.11
